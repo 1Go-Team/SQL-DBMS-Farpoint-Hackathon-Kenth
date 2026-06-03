@@ -50,6 +50,11 @@ class Table(DataObject):
                 if self.primary_key and column in self.primary_key:
                     key_str = 'PRI/FOR'
             info += "{:<25}{:<15}{:<10}{:<10}\n".format(column, column_type, null_str, key_str)
+        info += "-----------------------------------------------------------------\n"
+        if hasattr(self, 'scan_type'):
+            info += f"Scan Type: {self.scan_type}\n"
+        if hasattr(self, 'index_info'):
+            info += f"{self.index_info}\n"
         info += "-----------------------------------------------------------------"
         return info
     

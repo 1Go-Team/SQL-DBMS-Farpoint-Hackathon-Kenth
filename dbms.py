@@ -204,13 +204,6 @@ class DBMS:
         table.scan_type = getattr(self, '_last_scan_type', 'Seq Scan')
         
         return table
-        self.meta_db.open_db()
-        table_key = self.meta_db.create_key_from_value(table_name)
-        table = self.meta_db.get(table_key)
-        if not table:
-            raise NoSuchTable()
-        self.meta_db.close_db()
-        return table
     
     
     def show_tables(self):
