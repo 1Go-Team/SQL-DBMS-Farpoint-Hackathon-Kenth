@@ -286,7 +286,7 @@ class DBMS:
         record = Record(table_name, data, primary_value, referencing)
         
         if self.transaction_manager.in_transaction:
-            self.transaction_manager.add_operation("insert", table_name=table_dict["table_name"], column_name_list=table_dict.get("column_name_list"), values=value_list)
+            self.transaction_manager.add_operation("insert", table_name=table_dict["table_name"], column_name_list=table_dict.get("column_name_list"), values=value_list, record_data=data)
             return InsertResult()
         
         table_db = DB(table_name)
@@ -441,145 +441,14 @@ class DBMS:
                     raise UpdateDuplicatePrimaryKeyError()
                 new_pks.add(new_pk_str)
         
+        if self.transaction_manager.in_transaction:
+            self.transaction_manager.add_operation("update", table_name=table_name, assignments=assignments, where=where_clause)
+            return UpdateResult(0), None
+        
         success_cnt = 0
         fail_cnt = 0
         
         # Apply updates
-        for key, record in matching_records:
-            # Check referential integrity if updating referenced PK
-            if updating_referenced_pk and record.referenced_by:
-                fail_cnt += 1
-                continue
-            
-            # Check FK integrity if updating FK columns
-            fk_violation = False
-            for col in assignments:
-                if table.foreign_keys and col in table.foreign_keys:
-                    referenced_table_name, referenced_column_name = table.foreign_keys[col]
-                    self.meta_db.open_db()
-                    referenced_table_key = self.meta_db.create_key_from_value(referenced_table_name)
-                    referenced_table_schema = self.meta_db.get(referenced_table_key)
-                    self.meta_db.close_db()
-                    
-                    referenced_table_db = DB(referenced_table_name)
-                    referenced_table_db.open_db()
-                    new_value = assignments[col]
-                    referenced_record = None
-                    if len(referenced_table_schema.primary_key) == 1:
-                        ref_key = referenced_table_db.create_key_from_value((new_value,))
-                        referenced_record = referenced_table_db.get(ref_key)
-                    else:
-                        for pk_val in referenced_table_db.keys():
-                            ref_key = referenced_table_db.create_key_from_value((new_value,))
-                            if ref_key.decode() in pk_val.decode():
-                                referenced_record = referenced_table_db.get(pk_val)
-                                break
-                    referenced_table_db.close_db()
-                    
-                    if referenced_record is None:
-                        fk_violation = True
-                        break
-            
-            if fk_violation:
-                fail_cnt += 1
-                continue
-            
-            # Build new data
-            new_data = dict(record.data)
-            for col, val in assignments.items():
-                new_data[col] = val
-            
-            # Build new primary value
-            new_primary_value = list(record.primary_value) if record.primary_value else []
-            if table.primary_key:
-                for i, pk_col in enumerate(table.primary_key):
-                    if pk_col in assignments:
-                        new_primary_value[i] = assignments[pk_col]
-                new_primary_value = tuple(new_primary_value)
-            else:
-                new_primary_value = record.primary_value
-            
-            # Handle FK referencing updates - remove old references
-            if record.referencing:
-                for (ref_table, ref_col), old_values in list(record.referencing.items()):
-                    for col in assignments:
-                        if table.foreign_keys and col in table.foreign_keys:
-                            rt, rc = table.foreign_keys[col]
-                            if rt == ref_table and rc == ref_col:
-                                old_value = record.data[col]
-                                ref_db = DB(ref_table)
-                                ref_db.open_db()
-                                inner_cursor = ref_db.create_cursor()
-                                kv = inner_cursor.first()
-                                while kv:
-                                    k, v = kv
-                                    ref_record = Record.deserialize(v)
-                                    if (table_name, col) in ref_record.referenced_by and old_value in ref_record.referenced_by[(table_name, col)]:
-                                        ref_record.remove_referenced_by(table_name, col, old_value)
-                                        ref_db.put(k, ref_record)
-                                    kv = inner_cursor.next()
-                                ref_db.discard_cursor(inner_cursor)
-                                ref_db.close_db()
-            
-            # Add new referencing relationships for updated FK columns
-            new_referencing = dict(record.referencing)
-            for col in assignments:
-                if table.foreign_keys and col in table.foreign_keys:
-                    referenced_table_name, referenced_column_name = table.foreign_keys[col]
-                    new_value = assignments[col]
-                    
-                    self.meta_db.open_db()
-                    referenced_table_key = self.meta_db.create_key_from_value(referenced_table_name)
-                    referenced_table_schema = self.meta_db.get(referenced_table_key)
-                    self.meta_db.close_db()
-                    
-                    referenced_table_db = DB(referenced_table_name)
-                    referenced_table_db.open_db()
-                    ref_key = referenced_table_db.create_key_from_value((new_value,))
-                    ref_record = None
-                    if len(referenced_table_schema.primary_key) == 1:
-                        ref_record = referenced_table_db.get(ref_key)
-                    else:
-                        for pk_val in referenced_table_db.keys():
-                            if ref_key.decode() in pk_val.decode():
-                                ref_record = referenced_table_db.get(pk_val)
-                                break
-                    
-                    if ref_record:
-                        ref_record.add_to_referenced_by(table_name, col, new_value)
-                        referenced_table_db.put(ref_key, ref_record)
-                        new_referencing[(referenced_table_name, referenced_column_name)] = {new_value}
-                    referenced_table_db.close_db()
-            
-            # Create updated record
-            new_record = Record(table_name, new_data, new_primary_value, new_referencing)
-            new_record.referenced_by = record.referenced_by
-            
-            # Update indexes
-            for col_name in table.columns:
-                if self.index_manager.has_index(table_name, col_name):
-                    old_val = record.data[col_name]
-                    new_val = new_data[col_name]
-                    if old_val != new_val:
-                        self.index_manager.update(table_name, col_name, old_val, new_val, key)
-            
-            # Write back
-            if pk_columns_being_updated:
-                table_db.delete(key)
-                new_key = table_db.create_key_from_value(new_primary_value)
-                table_db.put(new_key, new_record)
-            else:
-                table_db.put(key, new_record)
-            
-            success_cnt += 1
-        
-        table_db.close_db()
-        
-        if self.transaction_manager.in_transaction:
-            self.transaction_manager.add_operation("update", table_name=table_name, assignments=assignments, where=where_clause)
-            return UpdateResult(success_cnt), UpdateReferentialIntegrityPassed(fail_cnt) if fail_cnt else None
-        
-        # Actually apply updates
         table_db = DB(table_name)
         table_db.open_db()
         success_cnt = 0
@@ -949,6 +818,50 @@ class DBMS:
                 key_value_pair = cursor.next()
             table_db.discard_cursor(cursor)
             table_db.close_db()
+        
+        # Merge buffered transaction operations into SELECT results
+        if self.transaction_manager.in_transaction:
+            for op in self.transaction_manager.operations:
+                if op["type"] == "insert":
+                    buffered_table = op["table_name"]
+                    if buffered_table in all_records_with_table:
+                        buffered_data = {}
+                        for column_name, value in op["record_data"].items():
+                            if column_name in common_columns:
+                                buffered_data[f"{buffered_table}.{column_name}"] = value
+                            else:
+                                buffered_data[column_name] = value
+                        all_records_with_table[buffered_table].append(buffered_data)
+                
+                elif op["type"] == "delete":
+                    buffered_table = op["table_name"]
+                    where = op.get("where")
+                    if buffered_table in all_records_with_table and where:
+                        buffered_schema = next((t for t in table_list if t.table_name == buffered_table), None)
+                        if buffered_schema:
+                            all_records_with_table[buffered_table] = [
+                                r for r in all_records_with_table[buffered_table]
+                                if self._evaluate_condition(deepcopy(where), [buffered_schema], r) != True
+                            ]
+                
+                elif op["type"] == "update":
+                    buffered_table = op["table_name"]
+                    assignments = op.get("assignments")
+                    where = op.get("where")
+                    if buffered_table in all_records_with_table and assignments:
+                        buffered_schema = next((t for t in table_list if t.table_name == buffered_table), None)
+                        if buffered_schema:
+                            for record in all_records_with_table[buffered_table]:
+                                try:
+                                    satisfies = self._evaluate_condition(deepcopy(where), [buffered_schema], record) if where else True
+                                    if satisfies == True:
+                                        for col, val in assignments.items():
+                                            if col in common_columns:
+                                                record[f"{buffered_table}.{col}"] = val
+                                            else:
+                                                record[col] = val
+                                except Exception:
+                                    pass
         
         cartesian_product = itertools.product(*all_records_with_table.values())
         records_product = [{k: v for record in combination_tuple for k, v in record.items()} for combination_tuple in cartesian_product]
