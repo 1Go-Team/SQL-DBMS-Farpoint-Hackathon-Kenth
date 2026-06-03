@@ -118,6 +118,18 @@ class SQLTransformer(Transformer):
         self.statement = f"{items[0].lower()} {items[1].lower()}"
         self.table = None
         return items
+    
+    def begin_query(self, items):
+        self.statement = "begin"
+        return items
+    
+    def commit_query(self, items):
+        self.statement = "commit"
+        return items
+    
+    def rollback_query(self, items):
+        self.statement = "rollback"
+        return items
 
     def insert_query(self, items):
         self.statement = items[0].lower()

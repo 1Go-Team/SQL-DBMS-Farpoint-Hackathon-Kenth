@@ -7,6 +7,7 @@ from functools import cmp_to_key
 
 from db_model import Table, Record, DB, MetaDB
 from index import IndexManager
+from transaction import TransactionManager
 from utils import *
 from messages import *
 
@@ -18,6 +19,8 @@ class DBMS:
         self.db_dir.mkdir(exist_ok=True)
         self.meta_db = MetaDB()
         self.index_manager = IndexManager()
+        self.transaction_manager = TransactionManager()
+        self.transaction_manager.replay_wal(self)
         self._load_existing_indexes()
         
         
@@ -66,6 +69,9 @@ class DBMS:
         
         self.index_manager.create_index(table_name, column_name)
         self._rebuild_index(table_name, column_name)
+        if self.transaction_manager.in_transaction:
+            self.transaction_manager.add_operation("create_index", table_name=table_name, column_name=column_name)
+            return f"Index created on {table_name}({column_name})"
         return f"Index created on {table_name}({column_name})"
     def create_table(self, table_dict: dict):
         table_name = table_dict["table_name"]
@@ -145,6 +151,9 @@ class DBMS:
         if primary_key:
             for pk_col in primary_key:
                 self.index_manager.create_index(table_name, pk_col)
+        if self.transaction_manager.in_transaction:
+            self.transaction_manager.add_operation("create_table", table_dict=table_dict)
+            return CreateTableSuccess(table_name)
         return CreateTableSuccess(table_name)
     
     
@@ -170,6 +179,9 @@ class DBMS:
         DB(table_name).remove_files()
         self.meta_db.close_db()
         
+        if self.transaction_manager.in_transaction:
+            self.transaction_manager.add_operation("drop_table", table_name=table_name)
+            return DropSuccess(table_name)
         return DropSuccess(table_name)
     
     
@@ -293,6 +305,9 @@ class DBMS:
         for col_name in table.columns:
             if self.index_manager.has_index(table_name, col_name):
                 self.index_manager.insert(table_name, col_name, data[col_name], record_key)
+        if self.transaction_manager.in_transaction:
+            self.transaction_manager.add_operation("insert", table_name=table_dict["table_name"], column_name_list=table_dict.get("column_name_list"), values=value_list)
+            return InsertResult()
         return InsertResult()
 
     
@@ -348,6 +363,9 @@ class DBMS:
         table_db.discard_cursor(outer_cursor)
         table_db.close_db()
         
+        if self.transaction_manager.in_transaction:
+            self.transaction_manager.add_operation("delete", table_name=table_name, where=where_clause)
+            return DeleteResult(0), None
         return DeleteResult(success_cnt), DeleteReferentialIntegrityPassed(fail_cnt) if fail_cnt else None
         
     
@@ -555,8 +573,48 @@ class DBMS:
         
         table_db.close_db()
         
+        if self.transaction_manager.in_transaction:
+            self.transaction_manager.add_operation("update", table_name=table_name, assignments=assignments, where=where_clause)
+            return UpdateResult(0), None
         return UpdateResult(success_cnt), UpdateReferentialIntegrityPassed(fail_cnt) if fail_cnt else None
         
+    
+    def begin_transaction(self):
+        self.transaction_manager.begin()
+        return "Transaction started"
+    
+    def commit_transaction(self):
+        ops = self.transaction_manager.commit()
+        if ops is None:
+            return "No active transaction"
+        results = []
+        for op in ops:
+            try:
+                if op["type"] == "insert":
+                    result = self.insert(
+                        {"table_name": op["table_name"], "column_name_list": op.get("column_name_list")},
+                        op["values"]
+                    )
+                elif op["type"] == "delete":
+                    result, extra = self.delete(op["table_name"], op.get("where"))
+                elif op["type"] == "update":
+                    result, extra = self.update(op["table_name"], op["assignments"], op.get("where"))
+                elif op["type"] == "create_table":
+                    result = self.create_table(op["table_dict"])
+                elif op["type"] == "drop_table":
+                    result = self.drop_table(op["table_name"])
+                elif op["type"] == "create_index":
+                    result = self.create_index(op["table_name"], op["column_name"])
+                else:
+                    result = "Unknown operation"
+                results.append(str(result))
+            except Exception as e:
+                results.append(str(e))
+        return "\n".join(results) if results else "Transaction committed"
+    
+    def rollback_transaction(self):
+        self.transaction_manager.rollback()
+        return "Transaction rolled back"
     
     def _evaluate_condition(self, condition, table_list: List[Table], record: dict):
         def get_record_value(operand):

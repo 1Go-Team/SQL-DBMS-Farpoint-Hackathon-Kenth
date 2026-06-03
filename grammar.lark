@@ -72,6 +72,10 @@ BY : "by"i
 ASC : "asc"i
 ORDER : "order"i
 
+BEGIN : "begin"i
+COMMIT : "commit"i
+ROLLBACK : "rollback"i
+
 EXIT : "exit"i
 
 
@@ -89,6 +93,9 @@ query : create_table_query
       | select_query
       | show_tables_query
       | update_query
+      | begin_query
+      | commit_query
+      | rollback_query
 
 
 // CREATE TABLE
@@ -170,6 +177,11 @@ order_by_item : [table_name "."] column_name [ASC | DESC]
 
 // CREATE INDEX
 create_index_query : CREATE INDEX IDENTIFIER ON table_name LP column_name RP
+
+// TRANSACTIONS
+begin_query : BEGIN
+commit_query : COMMIT
+rollback_query : ROLLBACK
 
 // SHOW TABLES
 show_tables_query : SHOW TABLES

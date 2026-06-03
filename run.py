@@ -53,6 +53,15 @@ def main():
                     print(PROMPT + str(result))
                     if extra:
                         print(PROMPT + str(extra))
+                elif statement == "begin":
+                    result = dbms.begin_transaction()
+                    print(PROMPT + str(result))
+                elif statement == "commit":
+                    result = dbms.commit_transaction()
+                    print(PROMPT + str(result))
+                elif statement == "rollback":
+                    result = dbms.rollback_transaction()
+                    print(PROMPT + str(result))
             except (SyntaxError, NoSuchTable, DuplicateColumnDefError, DuplicatePrimaryKeyDefError, 
                     ReferenceTypeError, ReferenceNonPrimaryKeyError, ReferenceColumnExistenceError, ReferenceTableExistenceError, 
                     NonExistingColumnDefError, TableExistenceError, CharLengthError, DropReferencedTableError, 
