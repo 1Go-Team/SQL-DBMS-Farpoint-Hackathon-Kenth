@@ -1,0 +1,104 @@
+
+============================================================
+TEST FILE: F:\Projects\SQL-DBMS\test/1-1.txt
+============================================================
+  PASS [1] create table account ( account_number int not null, bra
+  PASS [2] drop table account;                                    
+  PASS [3] explain account;                                         ->  [NoSuchTable] No such table
+  PASS [4] describe account;                                        ->  [NoSuchTable] No such table
+  PASS [5] desc account;                                            ->  [NoSuchTable] No such table
+  PASS [6] insert into account values(9732, 'Perryridge');          ->  [NoSuchTable] No such table
+  PASS [7] delete from account where branch_name = 'Perryridge';    ->  [NoSuchTable] No such table
+  PASS [8] select * from account;                                   ->  [SelectTableExistenceError] Selection has failed: 'account' does not exist
+  PASS [9] select customer_name, borrower.loan_number, amount from  ->  [SelectTableExistenceError] Selection has failed: 'borrower' does not exist
+  PASS [10] show tables;                                           
+  PASS [11] update student set id = 5 where name="susan";            ->  [NoSuchTable] No such table
+  PASS [12] exit;                                                  
+  PASS [13] insert into account values(9732, 'Perryridge');          ->  [NoSuchTable] No such table
+  PASS [14] show tables;                                           
+  PASS [15] insert into account;                                     ->  [SyntaxError] Syntax error
+  PASS [16] desc account;                                            ->  [NoSuchTable] No such table
+
+============================================================
+TEST FILE: F:\Projects\SQL-DBMS\test/1-2.txt
+============================================================
+  PASS [1] create table account ( account_number int not null, bra
+  PASS [2] drop table account;                                    
+  PASS [3] explain account;                                         ->  [NoSuchTable] No such table
+  PASS [4] describe account;                                        ->  [NoSuchTable] No such table
+  PASS [5] desc account;                                            ->  [NoSuchTable] No such table
+  PASS [6] insert into account values(9732, 'Perryridge');          ->  [NoSuchTable] No such table
+  PASS [7] delete from account where branch_name = 'Perryridge';    ->  [NoSuchTable] No such table
+  PASS [8] select * from account;                                   ->  [SelectTableExistenceError] Selection has failed: 'account' does not exist
+  PASS [9] select customer_name, borrower.loan_number, amount from  ->  [SelectTableExistenceError] Selection has failed: 'borrower' does not exist
+  PASS [10] show tables;                                           
+  PASS [11] update student set id = 5 where name="susan";            ->  [NoSuchTable] No such table
+  PASS [12] exit;                                                  
+  PASS [13] insert into account values(9732, 'Perryridge');          ->  [NoSuchTable] No such table
+  PASS [14] show tables;                                           
+  PASS [15] insert into account;                                     ->  [SyntaxError] Syntax error
+  PASS [16] desc account;                                            ->  [NoSuchTable] No such table
+  PASS [17] create table department( dept_name char(20) not null, b
+  PASS [18] create table student( ID char(5) not null, name char(20
+  PASS [19] insert into student values('2018-17119', 'Sue Hyun', 'B  ->  [InsertReferentialIntegrityError] Insertion has failed: Referential integrity violation
+  PASS [20] insert into depart values('Business', 'No. 301', 45);    ->  [NoSuchTable] No such table
+  PASS [21] insert into department values('Business', 'No. 301', 45
+  PASS [22] create table advisor( s_id char(5) not null, i_id char(
+  PASS [23] create table advisor( s_id char(10) not null, s_id char  ->  [DuplicateColumnDefError] Create table has failed: column definition is duplicated
+  PASS [24] create table advisor( s_id char(0) not null, i_id char(  ->  [CharLengthError] Char length should be over 0
+  FAIL [25] create table advisor( s_id char(0.1) not null, i_id cha  ->  expected CharLengthError, got: [SyntaxError] Syntax error
+  PASS [26] create table advisor( s_id char(10) not null, i_id char  ->  [DuplicatePrimaryKeyDefError] Create table has failed: primary key definition is duplicated
+  PASS [27] create table advisor( s_id char(10) not null, i_id char  ->  [NonExistingColumnDefError] Create table has failed: 'id' does not exist in column definition
+  PASS [28] create table advisor( s_id char(10) not null, i_id char  ->  [NonExistingColumnDefError] Create table has failed: 'id' does not exist in column definition
+  PASS [29] create table student( s_id char(10) not null, i_id char  ->  [TableExistenceError] Create table has failed: table with the same name already exists
+  FAIL [30] create table advisor( s_id char(10) not null, i_id char  ->  expected ReferenceTableExistenceError, got: [TableExistenceError] Create table has failed: table with the same name already exists
+  FAIL [31] create table advisor( s_id char(10) not null, i_id char  ->  expected ReferenceColumnExistenceError, got: [TableExistenceError] Create table has failed: table with the same name already exists
+  FAIL [32] create table advisor( s_id char(10) not null, i_id char  ->  expected ReferenceNonPrimaryKeyError, got: [TableExistenceError] Create table has failed: table with the same name already exists
+  PASS [33] create table instructor( id int, primary key(id) );    
+  FAIL [34] create table advisor( s_id char(10) not null, i_id char  ->  expected ReferenceTypeError, got: [TableExistenceError] Create table has failed: table with the same name already exists
+  PASS [35] create table department( dept_name char(20) not null, b  ->  [TableExistenceError] Create table has failed: table with the same name already exists
+  PASS [36] create table student( ID char(5) not null, name char(20  ->  [TableExistenceError] Create table has failed: table with the same name already exists
+  PASS [37] create table advisor( s_id char(5) not null, i_id char(  ->  [TableExistenceError] Create table has failed: table with the same name already exists
+  PASS [38] create table adv( a_id char(5) not null, b_id char(10) 
+
+============================================================
+TEST FILE: F:\Projects\SQL-DBMS\test/1-3.txt
+============================================================
+  PASS [1] create table students ( id char (10) not null, name cha
+  PASS [2] create table lectures ( id int not null, name char (20)
+  PASS [3] create table ref ( id int, foreign key (id) references 
+  PASS [4] create table apply ( s_id char (10) not null, l_id int 
+  PASS [5] insert into studentss values('2018-17119', 'Sue');       ->  [NoSuchTable] No such table
+  PASS [6] insert into students(id) values('2018-17119', 'Sue');    ->  [InsertTypeMismatchError] Insertion has failed: Types are not matched
+  PASS [7] insert into students(id, name) values('2018-17119');     ->  [InsertTypeMismatchError] Insertion has failed: Types are not matched
+  PASS [8] insert into students(id, name) values(2018, 'Sue');      ->  [InsertTypeMismatchError] Insertion has failed: Types are not matched
+  PASS [9] insert into students(id, name) values('2018-17119', 45)  ->  [InsertTypeMismatchError] Insertion has failed: Types are not matched
+  PASS [10] insert into students(id, name) values(null, 'Sue');      ->  [InsertColumnNonNullableError] Insertion has failed: 'id' is not nullable
+  PASS [11] insert into students(id, namee) values('2018-17119', 'S  ->  [InsertColumnExistenceError] Insertion has failed: 'namee' does not exist
+  PASS [12] insert into students(id, name) values('2018-17119', 'Su
+  PASS [13] insert into students(id, name) values('shpark', 'Sue');
+  PASS [14] insert into students values('shpark2', 'Sue');         
+  PASS [15] insert into lectures(id, name, capacity) values(10, 'DB
+  PASS [16] insert into ref(id) values(10);                        
+  PASS [17] insert into students values('shpark2', 'Sue');           ->  [InsertDuplicatePrimaryKeyError] Insertion has failed: Primary key duplication
+  PASS [18] insert into lectures(id, name, capacity) values(10, 'DB  ->  [InsertDuplicatePrimaryKeyError] Insertion has failed: Primary key duplication
+  PASS [19] insert into ref(id) values(10);                        
+  PASS [20] insert into ref(id) values(3);                           ->  [InsertReferentialIntegrityError] Insertion has failed: Referential integrity violation
+  FAIL [21] select customer_name, borrower.loan_number, amount from  ->  [SelectTableExistenceError] Selection has failed: 'borrower' does not exist
+  PASS [22] select * from students;                                
+  PASS [23] select * from students, lectures;                      
+  PASS [24] select * from apply, students, lectures;               
+  PASS [25] select students.name, capacity from students, lectures;
+  PASS [26] select lectures.capacity from students, lectures;      
+  PASS [27] select ID from students, lectures;                       ->  [SelectColumnResolveError] Selection has failed: fail to resolve 'id'
+  PASS [28] select year from students;                               ->  [SelectColumnResolveError] Selection has failed: fail to resolve 'year'
+  PASS [29] select * from students where name = 'Sue' and id = '201
+  PASS [30] select * from students where name = 'Sue';             
+  PASS [31] select * from students where students.name = 'Sue';    
+  PASS [32] select capacity, students.id from students, lectures wh
+  PASS [33] select capacity, students.id from students, lectures wh
+  FAIL [34] select customer_name, borrower.loan_number, amount from  ->  [SelectTableExistenceError] Selection has failed: 'borrower' does not exist
+
+============================================================
+TOTAL: 81 passed, 7 failed
+============================================================
