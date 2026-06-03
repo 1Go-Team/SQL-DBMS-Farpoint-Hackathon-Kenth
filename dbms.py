@@ -887,6 +887,15 @@ class DBMS:
                 final_records.append(new_record)
             
             final_columns = list(final_records[0].keys()) if final_records else []
+        elif select_columns == "*":
+            final_records = filtered_records
+            final_columns = []
+            for table_schema in table_list:
+                for column in table_schema.columns:
+                    if column in common_columns:
+                        final_columns.append(f"{table_schema.table_name}.{column}")
+                    else:
+                        final_columns.append(column)
         elif select_columns:
             final_records = []
             for record in filtered_records:
