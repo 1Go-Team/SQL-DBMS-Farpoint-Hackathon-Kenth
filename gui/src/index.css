@@ -28,5 +28,4 @@ button:disabled { background: #555; cursor: not-allowed; }
 .result-table tbody tr:nth-child(even):hover { background: #1a1a2e; }
 .empty-row { text-align: center; color: #888; font-style: italic; padding: 1rem; }
 
-.tx-bar { display: flex; gap: 0.5rem; align-items: center; }
-.tx-badge { background: #e94560; padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
+

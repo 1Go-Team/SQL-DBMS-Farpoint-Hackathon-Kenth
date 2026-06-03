@@ -9,7 +9,6 @@ function App() {
   const [tables, setTables] = useState([]);
   const [selectedTable, setSelectedTable] = useState(null);
   const [tableSchema, setTableSchema] = useState(null);
-  const [inTransaction, setInTransaction] = useState(false);
   const [tableData, setTableData] = useState(null);
 
   useEffect(() => {
@@ -64,44 +63,6 @@ function App() {
     }
   };
 
-  const txBegin = async () => {
-    try {
-      const res = await fetch(`${API_URL}/transaction/begin`, { method: 'POST' });
-      const data = await res.json();
-      setResult(data.result);
-      setInTransaction(true);
-      setTableData(null);
-      setError('');
-    } catch (e) {
-      setError(e.message);
-    }
-  };
-
-  const txCommit = async () => {
-    try {
-      const res = await fetch(`${API_URL}/transaction/commit`, { method: 'POST' });
-      const data = await res.json();
-      setResult(data.result);
-      setInTransaction(false);
-      setTableData(null);
-      fetchTables();
-    } catch (e) {
-      setError(e.message);
-    }
-  };
-
-  const txRollback = async () => {
-    try {
-      const res = await fetch(`${API_URL}/transaction/rollback`, { method: 'POST' });
-      const data = await res.json();
-      setResult(data.result);
-      setInTransaction(false);
-      setTableData(null);
-    } catch (e) {
-      setError(e.message);
-    }
-  };
-
   return (
     <div className="app">
       <aside className="sidebar">
@@ -127,12 +88,6 @@ function App() {
       </aside>
       <main className="main">
         <h1>SQL DBMS</h1>
-        <div className="tx-bar">
-          <button onClick={txBegin} disabled={inTransaction}>BEGIN</button>
-          <button onClick={txCommit} disabled={!inTransaction}>COMMIT</button>
-          <button onClick={txRollback} disabled={!inTransaction}>ROLLBACK</button>
-          {inTransaction && <span className="tx-badge">IN TRANSACTION</span>}
-        </div>
         <textarea
           value={query}
           onChange={e => setQuery(e.target.value)}

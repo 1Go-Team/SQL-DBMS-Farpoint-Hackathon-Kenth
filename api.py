@@ -139,21 +139,6 @@ def describe_table(table_name: str):
         raise HTTPException(status_code=404, detail=str(e))
 
 
-@app.post("/transaction/begin")
-def tx_begin():
-    return {"result": dbms.begin_transaction()}
-
-
-@app.post("/transaction/commit")
-def tx_commit():
-    return {"result": dbms.commit_transaction()}
-
-
-@app.post("/transaction/rollback")
-def tx_rollback():
-    return {"result": dbms.rollback_transaction()}
-
-
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
