@@ -58,9 +58,19 @@ EQUAL: "="
 NOTEQUAL: "!="
 
 SHOW : "show"i
+INDEX : "index"i
+ON : "on"i
 
 UPDATE : "update"i
 SET : "set"i
+
+// New tokens for aggregates, group by, order by
+SUM : "sum"i
+COUNT : "count"i
+GROUP : "group"i
+BY : "by"i
+ASC : "asc"i
+ORDER : "order"i
 
 EXIT : "exit"i
 
@@ -69,6 +79,7 @@ EXIT : "exit"i
 command : query_list | EXIT ";"  // exit is evaluated at the command level
 query_list : (query ";")+
 query : create_table_query
+      | create_index_query
       | drop_table_query
       | explain_query
       | describe_query
@@ -87,7 +98,7 @@ table_element : column_definition
               | table_constraint_definition
 column_definition : column_name data_type [NOT NULL]
 table_constraint_definition : primary_key_constraint
-                            | referential_constraint
+                              | referential_constraint
 primary_key_constraint : PRIMARY KEY column_name_list
 referential_constraint : FOREIGN KEY column_name_list REFERENCES table_name column_name_list
 
@@ -122,9 +133,15 @@ delete_query : DELETE FROM table_name [where_clause]
 // SELECT
 select_query : SELECT select_list table_expression
 select_list : "*"
-            | selected_column ("," selected_column)*
+            | selected_item ("," selected_item)*
+selected_item : selected_column
+              | aggregate_expr
 selected_column : [table_name "."] column_name [AS column_name]
-table_expression : from_clause [where_clause]
+aggregate_expr : aggregate_function LP aggregate_param RP [AS column_name]
+aggregate_param : "*"
+                | [table_name "."] column_name
+aggregate_function : SUM | COUNT
+table_expression : from_clause [where_clause] [group_by_clause] [order_by_clause]
 from_clause : FROM table_reference_list
 table_reference_list : referred_table ("," referred_table)*
 referred_table : table_name [AS table_name]
@@ -144,10 +161,20 @@ comp_operand : comparable_value
 comparable_value : INT | STR | DATE
 null_predicate : [table_name "."] column_name null_operation
 null_operation : IS [NOT] NULL
+group_by_clause : GROUP BY group_by_column_list
+group_by_column_list : group_by_column ("," group_by_column)*
+group_by_column : [table_name "."] column_name
+order_by_clause : ORDER BY order_by_item_list
+order_by_item_list : order_by_item ("," order_by_item)*
+order_by_item : [table_name "."] column_name [ASC | DESC]
+
+// CREATE INDEX
+create_index_query : CREATE INDEX IDENTIFIER ON table_name LP column_name RP
 
 // SHOW TABLES
 show_tables_query : SHOW TABLES
 
 // UPDATE
-update_query : UPDATE table_name SET assignment [where_clause]
+update_query : UPDATE table_name SET assignment_list [where_clause]
+assignment_list : assignment ("," assignment)*
 assignment : column_name EQUAL value

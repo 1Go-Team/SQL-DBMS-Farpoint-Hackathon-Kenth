@@ -16,14 +16,16 @@ class SQLTransformer(Transformer):
         }
         self.record = list()  # values to insert
         self.tables = list()
-        self.select_columns = list()  # [(table_name, column_name), ...)] or '*
+        self.select_columns = list()  # [(table_name, column_name), ...)] or '*', or aggregate tuples
         self.where = dict()  # [(table_name, column_name, operator, value), ...] up to 4 conditions
+        self.group_by = list()
+        self.order_by = list()
         
     # assumes the parse tree transforms only one query at a time
     def command(self, items):
         if items[0] == "exit":
             self.statement = items[0]
-        return self.statement, self.table, self.record, self.tables, self.select_columns, self.where
+        return self.statement, self.table, self.record, self.tables, self.select_columns, self.where, self.group_by, self.order_by
     
     def query_list(self, items):
         return items[0]
@@ -35,6 +37,15 @@ class SQLTransformer(Transformer):
     def create_table_query(self, items):
         self.statement = f"{items[0].lower()} {items[1].lower()}"
         self.table["table_name"] = items[2]
+        return items
+    
+    def create_index_query(self, items):
+        self.statement = f"{items[0].lower()} {items[1].lower()}"
+        self.table = {
+            "index_name": items[2].value.lower(),
+            "table_name": items[4],
+            "column_name": items[6]
+        }
         return items
         
     def table_name(self, items) -> str:
@@ -144,13 +155,36 @@ class SQLTransformer(Transformer):
         self.select_columns = items[1]
         self.tables = items[2][0]
         self.where = items[2][1]
+        self.group_by = items[2][2] if len(items[2]) > 2 else None
+        self.order_by = items[2][3] if len(items[2]) > 3 else None
         return items
         
     def select_list(self, items):
-        return items
+        if not items:
+            return "*"
+        if items[0] == "*":
+            return "*"
+        return [item for item in items if item != ',']
+    
+    def selected_item(self, items):
+        return items[0]
     
     def selected_column(self, items):
         return items[0], items[1]  # table_name, column_name
+    
+    def aggregate_expr(self, items):
+        func_name = items[0]
+        param = items[2]
+        alias = items[5] if len(items) > 5 else None
+        return (func_name, param, alias)
+    
+    def aggregate_param(self, items):
+        if not items or items[0] == "*":
+            return "*"
+        return (items[0], items[1])
+    
+    def aggregate_function(self, items):
+        return items[0].lower()
     
     def table_expression(self, items):
         return items
@@ -166,6 +200,31 @@ class SQLTransformer(Transformer):
     
     def where_clause(self, items):
         return items[1]  # items[0] == "where"
+    
+    def group_by_clause(self, items):
+        return items[2]  # items[0] == GROUP, items[1] == BY
+    
+    def group_by_column_list(self, items):
+        return [item for item in items if item != ',']
+    
+    def group_by_column(self, items):
+        return (items[0], items[1])
+    
+    def order_by_clause(self, items):
+        return items[2]  # items[0] == ORDER, items[1] == BY
+    
+    def order_by_item_list(self, items):
+        return [item for item in items if item != ',']
+    
+    def order_by_item(self, items):
+        table_name = items[0]
+        column_name = items[1]
+        direction = items[2]
+        if direction is None or str(direction).lower() == "asc":
+            direction = "asc"
+        else:
+            direction = "desc"
+        return (table_name, column_name, direction)
     
     def boolean_expr(self, items):
         if len(items) == 1:
@@ -245,7 +304,22 @@ class SQLTransformer(Transformer):
         else:
             return "is", None
     
-    # not for project 1-2, 1-3
     def update_query(self, items):
         self.statement = items[0].lower()
-        return "'UPDATE' requested"
+        self.table = {
+            "table_name": items[1],
+            "assignments": items[3]  # dict from assignment_list
+        }
+        self.where = items[4] if len(items) > 4 else None
+        return items
+    
+    def assignment_list(self, items):
+        result = {}
+        for item in items:
+            if isinstance(item, dict):
+                result.update(item)
+        return result
+    
+    def assignment(self, items):
+        # items: [column_name, EQUAL, value]
+        return {items[0]: items[2]}

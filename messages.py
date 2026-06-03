@@ -40,6 +40,16 @@ class DeleteReferentialIntegrityPassed(SuccessLog):  # NOTE: optional
         super().__init__(f"'{self.num_deleted}' row(s) are not deleted due to referential integrity")
         
 
+class UpdateResult(SuccessLog):
+    def __init__(self, num_updated):
+        self.num_updated = num_updated
+        super().__init__(f"'{self.num_updated}' row(s) are updated")
+
+class UpdateReferentialIntegrityPassed(SuccessLog):
+    def __init__(self, num_skipped):
+        self.num_skipped = num_skipped
+        super().__init__(f"'{self.num_skipped}' row(s) are not updated due to referential integrity")
+
 # ---------------------------------------------------------------------------- #
 #                       Failure messages in DBMS                               #
 # ---------------------------------------------------------------------------- #
@@ -183,3 +193,27 @@ class WhereColumnNotExist(Exception):
 class WhereAmbiguousReference(Exception):
     def __init__(self):
         super().__init__(f"Where clause contains ambiguous reference")
+
+
+# UPDATE errors
+class UpdateTypeMismatchError(Exception):
+    def __init__(self):
+        super().__init__("Update has failed: Types are not matched")
+
+class UpdateColumnExistenceError(Exception):
+    def __init__(self, column_name):
+        self.column_name = column_name
+        super().__init__(f"Update has failed: '{self.column_name}' does not exist")
+
+class UpdateColumnNonNullableError(Exception):
+    def __init__(self, column_name):
+        self.column_name = column_name
+        super().__init__(f"Update has failed: '{self.column_name}' is not nullable")
+
+class UpdateDuplicatePrimaryKeyError(Exception):
+    def __init__(self):
+        super().__init__("Update has failed: Primary key duplication")
+
+class UpdateReferentialIntegrityError(Exception):
+    def __init__(self):
+        super().__init__("Update has failed: Referential integrity violation")
