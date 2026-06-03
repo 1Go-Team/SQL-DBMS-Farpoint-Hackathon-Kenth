@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 
 from dbms import DBMS
 from sql_transformer import SQLTransformer
@@ -32,6 +32,27 @@ class QueryResponse(BaseModel):
     result: Optional[str] = None
     error: Optional[str] = None
     scan_type: Optional[str] = None
+    headers: Optional[List[str]] = None
+    rows: Optional[List[List[str]]] = None
+    is_table: bool = False
+
+
+def parse_tabulate(text: str):
+    """Parse tabulate grid output into headers and rows."""
+    lines = text.strip().split('\n')
+    headers = None
+    rows = []
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith('+'):
+            continue
+        if line.startswith('|'):
+            cells = [cell.strip() for cell in line[1:-1].split('|')]
+            if headers is None:
+                headers = cells
+            else:
+                rows.append(cells)
+    return headers, rows
 
 
 @app.post("/query", response_model=QueryResponse)
@@ -43,6 +64,10 @@ def execute_query(req: QueryRequest):
         statement, table, record, tables, select_columns, where, group_by, order_by = transformed
 
         result = None
+        is_table = False
+        headers = None
+        rows = None
+
         if statement == "create table":
             result = str(dbms.create_table(table))
         elif statement == "create index":
@@ -61,7 +86,10 @@ def execute_query(req: QueryRequest):
             if extra:
                 result += "\n" + str(extra)
         elif statement == "select":
-            result = dbms.select(tables, select_columns, where, group_by, order_by)
+            raw = dbms.select(tables, select_columns, where, group_by, order_by)
+            headers, rows = parse_tabulate(raw)
+            is_table = True
+            result = raw
         elif statement == "update":
             r, extra = dbms.update(table["table_name"], table["assignments"], where)
             result = str(r)
@@ -77,7 +105,14 @@ def execute_query(req: QueryRequest):
             result = "Unknown statement"
 
         scan_type = dbms.get_last_scan_type() if hasattr(dbms, 'get_last_scan_type') else None
-        return QueryResponse(success=True, result=result, scan_type=scan_type)
+        return QueryResponse(
+            success=True,
+            result=result,
+            scan_type=scan_type,
+            headers=headers,
+            rows=rows,
+            is_table=is_table
+        )
     except Exception as e:
         return QueryResponse(success=False, error=str(e))
 

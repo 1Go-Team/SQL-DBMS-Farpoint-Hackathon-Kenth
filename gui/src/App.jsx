@@ -10,6 +10,7 @@ function App() {
   const [selectedTable, setSelectedTable] = useState(null);
   const [tableSchema, setTableSchema] = useState(null);
   const [inTransaction, setInTransaction] = useState(false);
+  const [tableData, setTableData] = useState(null);
 
   useEffect(() => {
     fetchTables();
@@ -28,6 +29,7 @@ function App() {
   const executeQuery = async () => {
     setResult('');
     setError('');
+    setTableData(null);
     const q = query.trim().endsWith(';') ? query.trim() : query.trim() + ';';
     try {
       const res = await fetch(`${API_URL}/query`, {
@@ -37,7 +39,11 @@ function App() {
       });
       const data = await res.json();
       if (data.success) {
-        setResult(data.result);
+        if (data.is_table && data.headers) {
+          setTableData({ headers: data.headers, rows: data.rows || [] });
+        } else {
+          setResult(data.result);
+        }
         if (/create table|drop table/i.test(q)) fetchTables();
       } else {
         setError(data.error);
@@ -64,6 +70,8 @@ function App() {
       const data = await res.json();
       setResult(data.result);
       setInTransaction(true);
+      setTableData(null);
+      setError('');
     } catch (e) {
       setError(e.message);
     }
@@ -75,6 +83,7 @@ function App() {
       const data = await res.json();
       setResult(data.result);
       setInTransaction(false);
+      setTableData(null);
       fetchTables();
     } catch (e) {
       setError(e.message);
@@ -87,6 +96,7 @@ function App() {
       const data = await res.json();
       setResult(data.result);
       setInTransaction(false);
+      setTableData(null);
     } catch (e) {
       setError(e.message);
     }
@@ -131,7 +141,37 @@ function App() {
         />
         <button onClick={executeQuery}>Execute</button>
         {error && <div className="error">{error}</div>}
-        {result && <pre className="result">{result}</pre>}
+        {result && !tableData && <pre className="result-text">{result}</pre>}
+        {tableData && (
+          <div className="table-container">
+            <table className="result-table">
+              <thead>
+                <tr>
+                  {tableData.headers.map((h, i) => (
+                    <th key={i}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {tableData.rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={tableData.headers.length} className="empty-row">
+                      No rows returned
+                    </td>
+                  </tr>
+                ) : (
+                  tableData.rows.map((row, i) => (
+                    <tr key={i}>
+                      {row.map((cell, j) => (
+                        <td key={j}>{cell}</td>
+                      ))}
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </main>
     </div>
   );

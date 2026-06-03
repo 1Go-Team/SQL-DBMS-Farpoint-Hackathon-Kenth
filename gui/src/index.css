@@ -8,13 +8,25 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #1a1a2e; c
 .sidebar li:hover, .sidebar li.active { background: #0f3460; }
 .schema { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #0f3460; font-size: 0.85rem; }
 .schema h4 { color: #e94560; margin-bottom: 0.3rem; }
-.main { flex: 1; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+.main { flex: 1; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; overflow-y: auto; }
 h1 { color: #e94560; font-size: 1.5rem; }
 textarea { width: 100%; padding: 0.8rem; border-radius: 6px; border: 1px solid #0f3460; background: #16213e; color: #eee; font-family: monospace; font-size: 1rem; resize: vertical; }
 button { padding: 0.6rem 1.2rem; border-radius: 6px; border: none; background: #e94560; color: white; font-weight: 600; cursor: pointer; align-self: flex-start; }
 button:hover { background: #ff6b81; }
 button:disabled { background: #555; cursor: not-allowed; }
 .error { background: #c0392b; padding: 0.8rem; border-radius: 6px; }
-.result { background: #16213e; padding: 1rem; border-radius: 6px; overflow-x: auto; font-family: monospace; white-space: pre-wrap; }
+.result-text { background: #16213e; padding: 1rem; border-radius: 6px; overflow-x: auto; font-family: monospace; white-space: pre-wrap; }
+
+/* Table styles */
+.table-container { background: #16213e; border-radius: 6px; overflow-x: auto; border: 1px solid #0f3460; }
+.result-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+.result-table thead { background: #0f3460; }
+.result-table th { padding: 0.7rem 1rem; text-align: left; font-weight: 600; color: #e94560; border-bottom: 2px solid #e94560; white-space: nowrap; }
+.result-table td { padding: 0.6rem 1rem; border-bottom: 1px solid #0f3460; }
+.result-table tbody tr:hover { background: #1a1a2e; }
+.result-table tbody tr:nth-child(even) { background: #1e2a4a; }
+.result-table tbody tr:nth-child(even):hover { background: #1a1a2e; }
+.empty-row { text-align: center; color: #888; font-style: italic; padding: 1rem; }
+
 .tx-bar { display: flex; gap: 0.5rem; align-items: center; }
 .tx-badge { background: #e94560; padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
